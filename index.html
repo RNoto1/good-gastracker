@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⛽ Rich's Gas Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+  body { background: #1a1a2e; color: #eee; max-width: 480px; margin: 0 auto; padding: 15px; }
+  h1 { text-align: center; font-size: 1.5em; color: #4ade80; margin-bottom: 15px; }
+  .card { background: #16213e; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+  h2 { font-size: 1.1em; color: #4ade80; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+  label { display: block; font-size: .85em; color: #aaa; margin-top: 8px; }
+  input[type=date], input[type=text], input[type=number] {
+    width: 100%; padding: 10px; border-radius: 8px; border: none; font-size: 1.1em;
+    background: #0f3460; color: #fff; margin-top: 3px;
+  }
+  input:focus { outline: 2px solid #4ade80; }
+  .row { display: flex; gap: 10px; } .row > div { flex: 1; }
+  .checkRow { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+  .checkRow input { width: 20px; height: 20px; accent-color: #4ade80; }
+  button {
+    width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 1.1em;
+    font-weight: bold; cursor: pointer; margin-top: 12px;
+  }
+  .btnAdd { background: #4ade80; color: #1a1a2e; }
+  .btnSm { width: auto; margin: 5px 4px 0 0; padding: 6px 10px; font-size: .8em; background: #0f3460; color: #4ade80; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .statBox { background: #0f3460; border-radius: 8px; padding: 10px; text-align: center; }
+  .statBox .big { font-size: 1.3em; color: #4ade80; font-weight: bold; }
+  .statBox .lbl { font-size: .75em; color: #999; }
+  .entry { background: #0f3460; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+  .entry .top { display: flex; justify-content: space-between; font-size: .9em; }
+  .entry .mpg { color: #ffd700; font-weight: bold; }
+  .entry .details { font-size: .8em; color: #aaa; margin-top: 4px; }
+  .delBtn { background: #e74c3c !important; color: #fff !important; width: auto !important; margin: 0 !important; padding: 3px 10px !important; font-size: .75em !important; }
+  .barWrap { margin-bottom: 8px; }
+  .barLbl { font-size: .8em; display: flex; justify-content: space-between; margin-bottom: 2px; }
+  .barBg { background: #0f3460; border-radius: 5px; height: 18px; overflow: hidden; }
+  .barFill { height: 100%; background: linear-gradient(90deg,#4ade80,#ffd700); border-radius: 5px; }
+  textarea { width: 100%; height: 80px; background: #0f3460; color: #fff; border: none; border-radius: 8px; padding: 8px; font-size: .75em; }
+</style>
+</head>
+<body>
+<h1>⛽ Rich's Gas Tracker</h1>
+
+<div class="card">
+  <h2>Add Fill-Up</h2>
+  <div class="row">
+    <div><label>Date</label><input type="date" id="fDate"></div>
+    <div><label>Vehicle</label><input type="text" id="fVehicle" list="vehicles" value="2014 Outback"><datalist id="vehicles"><option>2014 Outback</option><option>2022 Outback</option></datalist></div>
+  </div>
+  <label>Station</label><input type="text" id="fStation" list="stations" placeholder="Sam's Club - Dickson City">
+  <datalist id="stations"><option>Sam's Club - Dickson City</option><option>Sheetz</option><option>Wawa</option><option>Giant</option><option>Lukoil</option></datalist>
+  <div class="row">
+    <div><label>Gallons</label><input type="number" id="fGal" inputmode="decimal" step="0.001" placeholder="13.884"></div>
+    <div><label>Price/Gal</label><input type="number" id="fPrice" inputmode="decimal" step="0.001" placeholder="4.379"></div>
+    <div><label>Total $</label><input type="number" id="fTotal" inputmode="decimal" step="0.01" placeholder="60.80"></div>
+  </div>
+  <label>Odometer (mi)</label><input type="number" id="fOdo" inputmode="numeric" placeholder="88550">
+  <div class="checkRow"><input type="checkbox" id="fFull" checked><label for="fFull" style="margin:0">Filled to FULL tank?</label></div>
+  <button class="btnAdd" onclick="addEntry()">➕ Log It</button>
+</div>
+
+<div class="card">
+  <h2>Stats</h2>
+  <div class="stats">
+    <div class="statBox"><div class="big" id="sAvg">–</div><div class="lbl">AVG MPG</div></div>
+    <div class="statBox"><div class="big" id="sBest">–</div><div class="lbl">BEST MPG</div></div>
+    <div class="statBox"><div class="big" id="sSpent">$0</div><div class="lbl">TOTAL SPENT</div></div>
+    <div class="statBox"><div class="big" id="sCount">0</div><div class="lbl">FILL-UPS</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>⛽ MPG by Station</h2>
+  <div id="stationBars"><p style="color:#888;font-size:.85em">Need 2+ fill-ups to compare</p></div>
+</div>
+
+<div class="card">
+  <h2>History</h2>
+  <div id="history"><p style="color:#888;font-size:.85em">No entries yet</p></div>
+</div>
+
+<div class="card">
+  <h2>Backup / Restore</h2>
+  <button class="btnSm" onclick="doExport()">📤 Copy All Data</button>
+  <button class="btnSm" onclick="doImport()">📥 Import from Below</button>
+  <textarea id="ioBox" placeholder="Data appears here on export. Paste exported data here, then tap Import."></textarea>
+</div>
+
+<script>
+const KEY = 'richGasTracker';
+let entries = [
+  {date:'2026-09-25', vehicle:'2014 Outback', station:"Sam's Club - Dickson City", gal:13.884, price:4.379, total:60.80, odo:88550, full:true}
+];
+
+function save() { localStorage.setItem(KEY, JSON.stringify(entries)); }
+function load() { try { const d = localStorage.getItem(KEY); if (d) entries = JSON.parse(d); } catch(e){} }
+
+function fGal_price_total(el){
+  const g = parseFloat(document.getElementById('fGal').value);
+  const p = parseFloat(document.getElementById('fPrice').value);
+  const t = parseFloat(document.getElementById('fTotal').value);
+  const d = new Date(); 
+}
+document.getElementById('fGal').addEventListener('input', e => {
+  const g = parseFloat(e.target.value) || 0;
+  const p = parseFloat(document.getElementById('fPrice').value);
+  if (g > 0 && p > 0) document.getElementById('fTotal').value = (g*p).toFixed(2);
+});
+document.getElementById('fPrice').addEventListener('input', e => {
+  const p = parseFloat(e.target.value) || 0;
+  const g = parseFloat(document.getElementById('fGal').value);
+  if (g > 0 && p > 0) document.getElementById('fTotal').value = (g*p).toFixed(2);
+});
+document.getElementById('fTotal').addEventListener('input', e => {
+  const t = parseFloat(e.target.value) || 0;
+  const g = parseFloat(document.getElementById('fGal').value);
+  if (g > 0 && t > 0) document.getElementById('fPrice').value = (t/g).toFixed(3);
+});
+
+function addEntry(){
+  const g = parseFloat(document.getElementById('fGal').value);
+  const p = parseFloat(document.getElementById('fPrice').value);
+  const t = parseFloat(document.getElementById('fTotal').value);
+  const o = parseInt(document.getElementById('fOdo').value);
+  const st = document.getElementById('fStation').value.trim() || 'Unknown';
+  const ve = document.getElementById('fVehicle').value.trim() || 'Unknown';
+  const dt = document.getElementById('fDate').value || new Date().toISOString().slice(0,10);
+  if (!g || !t || !o) { alert('Need gallons, total, and odometer!'); return; }
+  if (!p) document.getElementById('fPrice').value = (t/g).toFixed(3);
+  entries.push({date:dt, vehicle:ve, station:st, gal:g, price:(p||t/g), total:t, odo:o, full:document.getElementById('fFull').checked});
+  save();
+  ['fGal','fPrice','fTotal','fOdo'].forEach(id => document.getElementById(id).value='');
+  render();
+}
+
+function delEntry(i){ if(confirm('Delete this entry?')) { entries.splice(i,1); save(); render(); } }
+
+function calcMpg(){
+  const sorted = [...entries].sort((a,b) => a.odo - b.odo);
+  const mp = {};
+  sorted.forEach((e,i) => {
+    if (!e.full) { e.mpg = null; return; }
+    let prev = null;
+    for (let j=i-1; j>=0; j--) { if (sorted[j].full && sorted[j].vehicle === e.vehicle) { prev = sorted[j]; break; } }
+    e.mpg = (prev && e.odo > prev.odo) ? ((e.odo - prev.odo) / e.gal) : null;
+  });
+}
+
+function render(){
+  calcMpg();
+  const withMpg = entries.filter(e => e.mpg);
+  document.getElementById('sAvg').textContent = withMpg.length ? (withMpg.reduce((s,e)=>s+e.mpg,0)/withMpg.length).toFixed(1) : '–';
+  document.getElementById('sBest').textContent = withMpg.length ? Math.max(...withMpg.map(e=>e.mpg)).toFixed(1) : '–';
+  document.getElementById('sSpent').textContent = '$' + entries.reduce((s,e)=>s+e.total,0).toFixed(2);
+  document.getElementById('sCount').textContent = entries.length;
+
+  // Station bars
+  const stations = {};
+  entries.filter(e=>e.mpg).forEach(e => {
+    (stations[e.station] = stations[e.station] || []).push(e.mpg);
+  });
+  const sKeys = Object.keys(stations);
+  const sbDiv = document.getElementById('stationBars');
+  if (!sKeys.length) { sbDiv.innerHTML = '<p style="color:#888;font-size:.85em">Need 2+ fill-ups to compare</p>'; }
+  else {
+    const avgs = sKeys.map(k => ({k, v: stations[k].reduce((a,b)=>a+b,0)/stations[k].length}));
+    const maxA = Math.max(...avgs.map(a=>a.v));
+    sbDiv.innerHTML = avgs.sort((a,b)=>b.v-a.v).map(a =>
+      `<div class="barWrap"><div class="barLbl"><span>${a.k}</span><span>${a.v.toFixed(1)} MPG</span></div><div class="barBg"><div class="barFill" style="width:${(a.v/maxA*100).toFixed(0)}%"></div></div></div>`
+    ).join('');
+  }
+
+  // History
+  const hDiv = document.getElementById('history');
+  if (!entries.length) { hDiv.innerHTML = '<p style="color:#888;font-size:.85em">No entries yet</p>'; }
+  else {
+    hDiv.innerHTML = [...entries].sort((a,b)=> b.odo - a.odo).map((e,i) => `
+      <div class="entry">
+        <div class="top">
+          <span>${e.date} · ${e.station}</span>
+          <button class="delBtn" onclick="delEntry(${i})">✕</button>
+        </div>
+        <div class="details">${e.gal.toFixed(3)} gal @ $${e.price.toFixed(3)} = $${e.total.toFixed(2)} · ${e.odo.toLocaleString()} mi</div>
+        <div class="mpg">${e.mpg ? e.mpg.toFixed(1) + ' MPG 🎉' : '⏳ baseline — next fill shows MPG'}</div>
+      </div>`).join('');
+  }
+}
+
+function doExport(){
+  document.getElementById('ioBox').value = JSON.stringify(entries);
+  document.getElementById('ioBox').select();
+  navigator.clipboard.writeText(JSON.stringify(entries)).then(()=>alert('Copied! Save that text somewhere safe.')).catch(()=>{});
+}
+function doImport(){
+  try {
+    const d = JSON.parse(document.getElementById('ioBox').value);
+    if (!Array.isArray(d)) throw 0;
+    if (confirm('Replace all current data with imported data?')) { entries = d; save(); render(); alert('Imported!'); }
+  } catch(e){ alert('That did not look like valid backup data.'); }
+}
+
+load();
+const today = new Date().toISOString().slice(0,10);
+document.getElementById('fDate').value = today;
+render();
+</script>
+</body>
+</html>
